@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## v1.0.1
+
+- Corrected the MIT License copyright holder to Alex Murtha. No exporter or
+  sanitizer code changes; the scripts are byte-identical to v1.0.0 and still
+  self-report v1.0.0.
+
 ## v1.0.0
 
 - Initial public package for one individual Google Ads advertiser account at a
