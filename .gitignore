@@ -1,0 +1,27 @@
+# Release outputs and generated evidence
+/release-assets/
+/evidence/
+/logs/
+/private/
+/work/
+
+# Exported advertiser data and local artifacts
+*.xlsx
+*.xls
+*.csv
+*.tsv
+*.pdf
+*.extract.json
+*-extract.json
+*_extract.json
+
+# Environment and local tooling
+.env
+.env.*
+!.env.example
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+.DS_Store

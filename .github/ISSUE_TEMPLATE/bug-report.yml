@@ -1,0 +1,96 @@
+name: Bug report
+description: Report a reproducible, non-sensitive problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include workbooks, Google Sheet URLs, customer IDs, campaign or search-term data, performance values, or secrets.
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Redaction confirmation
+      options:
+        - label: I removed advertiser data, customer IDs, Google Sheet URLs, campaign/search-term data, performance values, and secrets.
+          required: true
+        - label: I ran the exporter from the individual advertiser account, not a Google Ads manager account (MCC).
+          required: true
+  - type: input
+    id: exporter-version
+    attributes:
+      label: Exporter version
+      description: Use the version shown in the script, for example v1.0.0.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - Preview
+        - Run/export
+        - Resume
+        - XLSX sanitizer
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: overall-status
+    attributes:
+      label: Non-sensitive `_export_info.overall_status`
+      description: Select only the status text. Do not paste any other workbook content.
+      options:
+        - Not available
+        - COMPLETE
+        - COMPLETE_WITH_LIMITATIONS
+        - COMPLETE_WITH_ERRORS
+        - RUNNING
+        - PAUSED
+        - FINALIZING
+        - RESET
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: workbook-status
+    attributes:
+      label: Non-sensitive `_export_info.workbook_status`
+      description: Select only the status text. Do not paste any other workbook content.
+      options:
+        - Not available
+        - READY
+        - READY_WITH_LIMITATIONS
+        - IN_PROGRESS
+        - NEEDS_REVIEW
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: next-action
+    attributes:
+      label: Redacted `_export_info.next_action`
+      description: Enter Not available or remove all account-specific content before pasting this instruction.
+      placeholder: Not available
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Required for XLSX sanitizer reports. Enter Not applicable for other phases.
+      placeholder: Node.js 24.x or Not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and safe reproduction steps
+    validations:
+      required: true
