@@ -960,3 +960,87 @@ test('RESET metadata may restart before an advertiser identity has been written'
     true,
   );
 });
+
+test('main() discards an expired checkpoint for the same account and workbook and starts fresh', () => {
+  const events = [];
+  const expired = {
+    schemaVersion: 1,
+    accountId: ACCOUNT_ID,
+    spreadsheetId: SPREADSHEET_ID,
+    startedAtMs: Date.now() - (25 * 60 * 60 * 1000),
+    version: 'older-version',
+  };
+  const { api, context } = loadExporter({
+    SpreadsheetApp: { flush() {} },
+    Utilities: { formatDate() { return '2026-08-28'; } },
+    AdsApp: {
+      getExecutionInfo() { return { isPreview() { return false; } }; },
+      currentAccount() {
+        return {
+          getCustomerId() { return ACCOUNT_ID; },
+          getName() { return 'Example Account'; },
+          getCurrencyCode() { return 'USD'; },
+          getTimeZone() { return 'America/New_York'; },
+        };
+      },
+    },
+    Logger: { log(line) { events.push(`log:${line}`); } },
+  });
+  const identity = { accountId: ACCOUNT_ID, spreadsheetId: SPREADSHEET_ID };
+  const now = Date.now();
+  assert.equal(api.isDiscardableExpiredState(expired, identity, now, 24), true);
+  assert.equal(api.isDiscardableExpiredState({ ...expired, startedAtMs: now }, identity, now, 24), false);
+  assert.equal(api.isDiscardableExpiredState({ ...expired, accountId: 'other' }, identity, now, 24), false);
+  assert.equal(api.isDiscardableExpiredState({ ...expired, spreadsheetId: 'other' }, identity, now, 24), false);
+  assert.equal(api.isDiscardableExpiredState({ ...expired, startedAtMs: 'junk' }, identity, now, 24), false);
+  assert.equal(api.isDiscardableExpiredState(null, identity, now, 24), false);
+
+  context.CONFIG.SPREADSHEET_URL = spreadsheetUrl();
+  context.validateRuntimeConfig_ = () => {};
+  context.extractSpreadsheetId_ = () => SPREADSHEET_ID;
+  context.openSpreadsheetRuntime_ = () => ({ getSheets() { return []; } });
+  context.summarizeWorkbookRuntime_ = () => [];
+  context.assertWorkbookOwnership_ = () => 'owned';
+  context.getManifestDefinition_ = () => [];
+  context.validateManifest_ = () => {};
+  context.materialConfigSignature_ = () => 'config-1';
+  context.loadStateSheetRuntime_ = () => expired;
+  context.discardCheckpointRuntime_ = () => { events.push('discard'); };
+  context.assertOwnedWorkbookRestartIdentityRuntime_ = () => { events.push('restart-check'); return true; };
+  context.assertAdvertiserAccountRuntime_ = () => true;
+  context.fetchCampaignIdsRuntime_ = () => { throw new Error('SENTINEL_FRESH_EXPORT_STARTED'); };
+
+  assert.throws(() => context.main(), /SENTINEL_FRESH_EXPORT_STARTED/);
+  assert.match(events[0], /^log:.*expired/);
+  assert.deepEqual(events.slice(1), ['discard', 'restart-check']);
+
+  // A different account's expired checkpoint is never discarded automatically.
+  events.length = 0;
+  context.loadStateSheetRuntime_ = () => ({ ...expired, accountId: 'other' });
+  assert.throws(() => context.main(), /unsupported schema|does not match|expired/i);
+  assert.deepEqual(events, []);
+});
+
+test('discardCheckpointRuntime_ removes the checkpoint and staging tabs and keeps final tabs', () => {
+  const sheets = ['campaign', '_export_state', '__gads_export_stage__change_history',
+    '__gads_export_backup__ads', '_export_info'];
+  const workbook = {
+    getSheets() { return sheets.map((name) => ({ getName() { return name; } })); },
+    getSheetByName(name) {
+      if (!sheets.includes(name)) return null;
+      return {
+        getName() { return name; },
+        setName(next) { sheets[sheets.indexOf(name)] = next; },
+      };
+    },
+    deleteSheet(sheet) { sheets.splice(sheets.indexOf(sheet.getName()), 1); },
+  };
+  let infoStatus = '';
+  const { context } = loadExporter({ Logger: { log() {} } });
+  context.getManifestDefinition_ = () => [];
+  context.writeExportInfoRuntime_ = (_spreadsheet, state) => { infoStatus = state.status; };
+
+  assert.equal(context.discardCheckpointRuntime_(workbook, SPREADSHEET_ID), 3);
+  assert.deepEqual(sheets, ['campaign', 'ads', '_export_info']);
+  assert.equal(infoStatus, 'RESET');
+});

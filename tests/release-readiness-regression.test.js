@@ -705,3 +705,43 @@ test('runtime pauses below the separate commit reserve and resumes without rerun
   assert.equal(resumed.events.some(([name]) => name === 'chunk'), false);
   assert.equal(resumed.events.filter(([name]) => name === 'commit').length, 1);
 });
+
+test('a failed mid-run status-tab refresh does not abort the export', () => {
+  // Break caught: a transient "Service Spreadsheets failed" during the cosmetic
+  // _export_info refresh between jobs ended the whole run after data was saved.
+  const logs = [];
+  const { api } = loadExporter({ Logger: { log(line) { logs.push(String(line)); } } });
+  const manifest = [{ id: 'job-one', tab: 'job-one', required: true, chunked: false }];
+
+  const adapter = createEngineAdapter();
+  let runningWrites = 0;
+  adapter.writeInfo = (state) => {
+    if (state.status === 'RUNNING' && ++runningWrites > 1) {
+      throw new Error('Service Spreadsheets failed while accessing document');
+    }
+  };
+  const result = api.runManifestEngine(createEngineState(api), manifest, adapter, 180, 360, 0);
+  assert.equal(result.status, 'COMPLETE');
+  assert.ok(runningWrites > 1, 'the progress refresh must have been attempted and failed');
+  assert.ok(logs.some((line) => /status tab refresh failed/i.test(line)));
+
+  // The forced refreshes that record a status change still fail loudly.
+  const strict = createEngineAdapter();
+  strict.writeInfo = (state) => {
+    if (state.status === 'FINALIZING') throw new Error('SENTINEL_FORCED_INFO_FAILURE');
+  };
+  assert.throws(
+    () => api.runManifestEngine(createEngineState(api), manifest, strict, 180, 360, 0),
+    /SENTINEL_FORCED_INFO_FAILURE/,
+  );
+});
+
+test('the runtime status-tab write retries a transient Sheets failure', () => {
+  const { context } = loadExporter({ Utilities: { sleep() {} } });
+  let attempts = 0;
+  context.writeExportInfoRuntime_ = () => {
+    if (++attempts < 3) throw new Error('Service Spreadsheets failed while accessing document');
+  };
+  context.createRuntimeAdapter_({ spreadsheet: {}, manifest: [] }).writeInfo({});
+  assert.equal(attempts, 3);
+});
