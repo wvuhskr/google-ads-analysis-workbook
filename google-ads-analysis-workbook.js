@@ -26,6 +26,9 @@
  * the advertiser's authorization and your organization's data policy.
  */
 
+// Workbook compatibility marker, not the release number. It is written into
+// _export_info and checkpoints and must match for a workbook to be reused, so
+// patch releases that keep the workbook contract leave it unchanged.
 var VERSION = 'v1.0.0';
 var OWNER_KEY = 'google-ads-analysis-workbook';
 var STATE_SCHEMA_VERSION = 1;
@@ -5479,7 +5482,8 @@ function discardCheckpointRuntime_(spreadsheet, spreadsheetId) {
     runtimeContractVersion: RUNTIME_CONTRACT_VERSION,
     jobIndex: 0, ranges: {}, tabs: {}
   };
-  writeExportInfoRuntime_(spreadsheet, resetState, manifest);
+  // The checkpoint is gone; without this status the next run needs a manual reset.
+  withRetry_(function() { writeExportInfoRuntime_(spreadsheet, resetState, manifest); }, { retries: 6 });
   return targets.length;
 }
 

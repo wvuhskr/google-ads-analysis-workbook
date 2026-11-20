@@ -1044,3 +1044,22 @@ test('discardCheckpointRuntime_ removes the checkpoint and staging tabs and keep
   assert.deepEqual(sheets, ['campaign', 'ads', '_export_info']);
   assert.equal(infoStatus, 'RESET');
 });
+
+test('discardCheckpointRuntime_ retries a transient failure writing the RESET status', () => {
+  // Break caught: the checkpoint was deleted, then one transient Sheets error on
+  // the _export_info write left nonterminal metadata that needs a manual reset.
+  const sheets = ['campaign', '_export_state', '_export_info'];
+  const workbook = {
+    getSheets() { return sheets.map((name) => ({ getName() { return name; } })); },
+    getSheetByName(name) { return sheets.includes(name) ? { getName() { return name; } } : null; },
+    deleteSheet(sheet) { sheets.splice(sheets.indexOf(sheet.getName()), 1); },
+  };
+  let attempts = 0;
+  const { context } = loadExporter({ Logger: { log() {} }, Utilities: { sleep() {} } });
+  context.getManifestDefinition_ = () => [];
+  context.writeExportInfoRuntime_ = () => {
+    if (++attempts < 2) throw new Error('Service Spreadsheets failed while accessing document');
+  };
+  assert.equal(context.discardCheckpointRuntime_(workbook, SPREADSHEET_ID), 1);
+  assert.equal(attempts, 2);
+});

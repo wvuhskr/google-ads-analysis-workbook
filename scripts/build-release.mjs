@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.2';
 const DEFAULT_OUTPUT = path.join(ROOT, 'release-assets', VERSION);
 const RELEASE_INPUTS = [
   'google-ads-analysis-workbook.js',
