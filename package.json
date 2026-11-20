@@ -1,6 +1,6 @@
 {
   "name": "google-ads-analysis-workbook",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "description": "Create a documented, resumable Google Ads account-context workbook with 90 complete performance days.",
   "keywords": [

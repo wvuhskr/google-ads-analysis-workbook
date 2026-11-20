@@ -31,15 +31,15 @@ create an XLSX file.
 
 1. Create a blank Google Sheet and copy its URL.
 2. Create a Google Ads Script, open
-   `google-ads-analysis-workbook-v1.0.0.js`, and paste all of its contents into
+   `google-ads-analysis-workbook-v1.0.2.js`, and paste all of its contents into
    the script editor.
 3. Set `CONFIG.SPREADSHEET_URL` to the blank Sheet URL.
 4. Save and use **Preview** first. Preview is read-only compatibility evidence;
    it does not complete an export.
 5. Use **Run** to begin the export. If it is resumable, run it again within 24
    hours of the original start without editing, renaming, or deleting
-   exporter-owned tabs. If the checkpoint expires, follow
-   `_export_info.next_action`.
+   exporter-owned tabs. If the checkpoint expires, the next run discards it
+   and starts a replacement export on its own.
 6. Apply the `_export_info` acceptance gate below.
 
 Proceed to **Run** only when Preview reaches `Diagnostics complete`, reports
@@ -87,7 +87,7 @@ receiving provider's terms separately.
 After the native workbook is technically ready, download it as XLSX and run:
 
 ```sh
-node sanitize-downloaded-xlsx-v1.0.0.js downloaded.xlsx downloaded-sanitized.xlsx
+node sanitize-downloaded-xlsx-v1.0.2.js downloaded.xlsx downloaded-sanitized.xlsx
 ```
 
 The sanitizer uses Node.js built-ins and makes no network requests. It corrects

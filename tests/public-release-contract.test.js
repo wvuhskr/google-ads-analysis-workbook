@@ -94,9 +94,9 @@ function archiveMember(archivePath, member) {
 
 function writeChecksums(directory) {
   const names = [
-    'google-ads-analysis-workbook-v1.0.0.js',
-    'sanitize-downloaded-xlsx-v1.0.0.js',
-    'google-ads-analysis-workbook-v1.0.0.zip',
+    'google-ads-analysis-workbook-v1.0.2.js',
+    'sanitize-downloaded-xlsx-v1.0.2.js',
+    'google-ads-analysis-workbook-v1.0.2.zip',
   ];
   fs.writeFileSync(
     path.join(directory, 'SHA256SUMS.txt'),
@@ -129,9 +129,9 @@ function createReleaseGitFixture(options = {}) {
   runGit(fixture, ['add', '--', ...inputs]);
   runGit(fixture, ['commit', '-q', '-m', 'fixture']);
   if (options.tag === 'annotated') {
-    runGit(fixture, ['tag', '-a', 'v1.0.0', '-m', 'fixture v1.0.0']);
+    runGit(fixture, ['tag', '-a', 'v1.0.2', '-m', 'fixture v1.0.2']);
   } else if (options.tag === 'lightweight') {
-    runGit(fixture, ['tag', 'v1.0.0']);
+    runGit(fixture, ['tag', 'v1.0.2']);
   }
   return fixture;
 }
@@ -164,7 +164,7 @@ function createCompletePublicGitFixture(options = {}) {
   runGit(fixture, ['add', '--', ...tracked]);
   runGit(fixture, ['commit', '-q', '-m', 'public fixture']);
   if (options.tag === 'annotated') {
-    runGit(fixture, ['tag', '-a', 'v1.0.0', '-m', 'fixture v1.0.0']);
+    runGit(fixture, ['tag', '-a', 'v1.0.2', '-m', 'fixture v1.0.2']);
   }
   return fixture;
 }
@@ -185,7 +185,7 @@ function withTamperedRelease(callback) {
   callback(releaseDirectory, fixture);
 }
 
-test('stable public source exposes the verified v1.0.0 contract', () => {
+test('stable public source exposes the verified v1.0.0 workbook contract', () => {
   const source = fs.readFileSync(EXPORTER, 'utf8');
   const sanitizerSource = fs.readFileSync(SANITIZER, 'utf8');
 
@@ -223,12 +223,12 @@ test('release builder emits only the approved assets and a verifiable flat archi
   const files = fs.readdirSync(outputDirectory).sort();
   assert.deepEqual(files, [
     'SHA256SUMS.txt',
-    'google-ads-analysis-workbook-v1.0.0.js',
-    'google-ads-analysis-workbook-v1.0.0.zip',
-    'sanitize-downloaded-xlsx-v1.0.0.js',
+    'google-ads-analysis-workbook-v1.0.2.js',
+    'google-ads-analysis-workbook-v1.0.2.zip',
+    'sanitize-downloaded-xlsx-v1.0.2.js',
   ]);
 
-  const archivePath = path.join(outputDirectory, 'google-ads-analysis-workbook-v1.0.0.zip');
+  const archivePath = path.join(outputDirectory, 'google-ads-analysis-workbook-v1.0.2.zip');
   const members = execFileSync('unzip', ['-Z', '-1', archivePath], { encoding: 'utf8' })
     .trim()
     .split('\n')
@@ -238,8 +238,8 @@ test('release builder emits only the approved assets and a verifiable flat archi
     'DATA-HANDLING.md',
     'LICENSE',
     'QUICKSTART.md',
-    'google-ads-analysis-workbook-v1.0.0.js',
-    'sanitize-downloaded-xlsx-v1.0.0.js',
+    'google-ads-analysis-workbook-v1.0.2.js',
+    'sanitize-downloaded-xlsx-v1.0.2.js',
   ]);
   for (const member of members) {
     assert.doesNotMatch(member, /[\\/]/, `${member} must be a flat archive member`);
@@ -247,8 +247,8 @@ test('release builder emits only the approved assets and a verifiable flat archi
   }
   const archiveQuickstart = archiveMember(archivePath, 'QUICKSTART.md').toString('utf8');
   const archiveDataHandling = archiveMember(archivePath, 'DATA-HANDLING.md').toString('utf8');
-  assert.match(archiveQuickstart, /google-ads-analysis-workbook-v1\.0\.0\.js/);
-  assert.match(archiveQuickstart, /sanitize-downloaded-xlsx-v1\.0\.0\.js/);
+  assert.match(archiveQuickstart, /google-ads-analysis-workbook-v1\.0\.2\.js/);
+  assert.match(archiveQuickstart, /sanitize-downloaded-xlsx-v1\.0\.2\.js/);
   assert.match(archiveQuickstart, /\[Data handling\]\(DATA-HANDLING\.md\)/);
   assert.doesNotMatch(archiveQuickstart, /\.\.\/|tools\//);
   assert.doesNotMatch(archiveDataHandling, /\]\(SECURITY\.md\)/);
@@ -275,7 +275,7 @@ test('release builder refuses to overwrite a nonempty destination', () => {
   assert.match(`${result.stdout}\n${result.stderr}`, /nonempty|empty|refus/i);
 });
 
-test('strict release builder requires a clean annotated v1.0.0 tag at HEAD', () => {
+test('strict release builder requires a clean annotated v1.0.2 tag at HEAD', () => {
   const clean = createReleaseGitFixture({ tag: 'annotated' });
   assert.equal(runFixtureBuild(clean, [temporaryDirectory('strict-release-')]).status, 0);
 
@@ -295,7 +295,7 @@ test('strict release builder requires a clean annotated v1.0.0 tag at HEAD', () 
 
   const nested = createReleaseGitFixture();
   runGit(nested, ['tag', '-a', 'inner-release', '-m', 'inner release']);
-  runGit(nested, ['tag', '-a', 'v1.0.0', 'inner-release', '-m', 'nested release']);
+  runGit(nested, ['tag', '-a', 'v1.0.2', 'inner-release', '-m', 'nested release']);
   const nestedResult = runFixtureBuild(nested, [temporaryDirectory('nested-tag-release-')]);
   assert.notEqual(nestedResult.status, 0);
   assert.match(`${nestedResult.stdout}\n${nestedResult.stderr}`, /directly|commit|tag/i);
@@ -582,7 +582,7 @@ test('public package audit rejects a checksum-rewritten release JS mismatch', ()
   // Break caught: hashes can be rewritten together with a substituted release
   // file, so the release bytes must also be compared with tracked source.
   withTamperedRelease((releaseDirectory, candidateRoot) => {
-    const exporter = path.join(releaseDirectory, 'google-ads-analysis-workbook-v1.0.0.js');
+    const exporter = path.join(releaseDirectory, 'google-ads-analysis-workbook-v1.0.2.js');
     fs.appendFileSync(exporter, '\n// package mismatch\n');
     writeChecksums(releaseDirectory);
     const result = runNode(AUDIT_PUBLIC_PACKAGE, [candidateRoot, releaseDirectory]);
@@ -596,7 +596,7 @@ test('public package audit rejects a checksum-rewritten ZIP member containing ad
   // changed member content uninspected after an attacker rewrites SHA256SUMS.
   withTamperedRelease((releaseDirectory, candidateRoot) => {
     const stage = temporaryDirectory('google-ads-analysis-workbook-zip-tamper-');
-    const archive = path.join(releaseDirectory, 'google-ads-analysis-workbook-v1.0.0.zip');
+    const archive = path.join(releaseDirectory, 'google-ads-analysis-workbook-v1.0.2.zip');
     fs.writeFileSync(path.join(stage, 'QUICKSTART.md'), `Download ${workbookUrl()}\n`);
     execFileSync('zip', ['-X', '-q', archive, 'QUICKSTART.md'], { cwd: stage });
     writeChecksums(releaseDirectory);
@@ -615,8 +615,8 @@ test('release builder produces byte-identical ZIPs across time zones', () => {
   assert.equal(runFixtureBuild(fixture, [utcDirectory], { env: { TZ: 'UTC' } }).status, 0);
   assert.equal(runFixtureBuild(fixture, [easternDirectory], { env: { TZ: 'America/New_York' } }).status, 0);
   assert.deepEqual(
-    fs.readFileSync(path.join(utcDirectory, 'google-ads-analysis-workbook-v1.0.0.zip')),
-    fs.readFileSync(path.join(easternDirectory, 'google-ads-analysis-workbook-v1.0.0.zip')),
+    fs.readFileSync(path.join(utcDirectory, 'google-ads-analysis-workbook-v1.0.2.zip')),
+    fs.readFileSync(path.join(easternDirectory, 'google-ads-analysis-workbook-v1.0.2.zip')),
   );
 });
 

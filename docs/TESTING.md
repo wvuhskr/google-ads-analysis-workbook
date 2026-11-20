@@ -14,12 +14,12 @@ npm run audit:release
 
 `npm run check` parses the exporter and sanitizer. `npm test` runs the
 dependency-free regression and public-release contract tests. The release
-builder creates local assets in `release-assets/v1.0.0/`; the audit checks
+builder creates local assets in `release-assets/v1.0.2/`; the audit checks
 allowed contents, checksums, common privacy-boundary failures, and required
 product-scope disclosures.
 
 `npm run build:release` is intentionally strict. It requires a clean Git tree,
-an annotated `v1.0.0` tag directly at `HEAD`, and release-input bytes identical
+an annotated `v1.0.2` tag directly at `HEAD`, and release-input bytes identical
 to `HEAD`. CI uses `npm run build:ci`, which skips only the tag requirement; it
 still requires a clean tree and exact `HEAD` input bytes.
 

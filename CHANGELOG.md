@@ -2,17 +2,21 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## v1.0.2
 
 - Scheduled runs no longer fail forever after an interrupted export. When the
   saved checkpoint is older than `MAX_RESUME_AGE_HOURS` and belongs to the same
   account and workbook, `main()` now discards it and starts a replacement
   export instead of stopping with "Saved export state has expired". Checkpoints
-  for a different account or workbook still stop the run.
+  for a different account or workbook still stop the run. The status write
+  that follows a discard or reset is retried.
 - A transient Google Sheets error while refreshing `_export_info` no longer
   ends the run. The refresh is retried, and a periodic mid-run refresh that
   still fails is logged and skipped. Refreshes that record a status change
   still fail loudly.
+- Drop-in upgrade: replace the script and keep your existing workbook and
+  schedule. The exporter still writes `v1.0.0` into the workbook as its
+  compatibility marker, so no reset is needed. The sanitizer is unchanged.
 
 ## v1.0.1
 

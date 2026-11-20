@@ -19,8 +19,8 @@ body:
     id: exporter-version
     attributes:
       label: Exporter version
-      description: Use the version shown in the script, for example v1.0.0.
-      placeholder: v1.0.0
+      description: Use the release you downloaded, shown in the script file name, for example v1.0.2.
+      placeholder: v1.0.2
     validations:
       required: true
   - type: dropdown

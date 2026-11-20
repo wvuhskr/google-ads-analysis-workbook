@@ -27,7 +27,7 @@ gitleaks dir . --redact --no-banner
 ```
 
 Copy the candidate into a fresh temporary repository, create a disposable
-synthetic commit and annotated `v1.0.0` tag there, and run the strict release
+synthetic commit and annotated `v1.0.2` tag there, and run the strict release
 builder and audit against that temporary root. This proves the clean-root,
 source-byte, archive, checksum, and tag gates without changing the final local
 repository before approval.
@@ -64,7 +64,7 @@ review gate passes, obtain explicit approval before creating or replacing the
 final local commit or annotated tag.
 
 After approval, create a fresh reviewed public root using a synthetic release
-identity, create the approved commit and annotated `v1.0.0` tag, run
+identity, create the approved commit and annotated `v1.0.2` tag, run
 `npm run build:release` and `npm run audit:release`, and generate the final
 public-file and release-asset hash manifest from those exact bytes.
 
