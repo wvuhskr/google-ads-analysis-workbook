@@ -41,8 +41,8 @@ create an XLSX file.
    progress when another manually started run is needed.
 6. If the run is resumable, run it again within 24 hours of the original start.
    Do not edit, rename, or delete exporter-owned tabs while it is running or
-   resumable. If the checkpoint expires, follow `_export_info.next_action` to
-   reset it safely and start a replacement export.
+   resumable. If the checkpoint expires, the next run discards it and starts a
+   replacement export on its own.
 7. Apply the `_export_info` acceptance gate below.
 
 Proceed to **Run** only when Preview reaches `Diagnostics complete`, reports

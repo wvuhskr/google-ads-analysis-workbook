@@ -45,7 +45,8 @@ known limitations.
   export.
 - Resumes from durable workbook checkpoints when Google Ads Scripts approaches
   its execution limit. The default checkpoint window is 24 hours from the
-  original start time.
+  original start time. After that, the next run discards the expired checkpoint
+  and starts a replacement export.
 - Includes `START_HERE`, `_export_info`, `_data_dictionary`, and
   `_field_dictionary` so people and analysis tools can interpret the workbook.
 - Applies an explicit technical readiness gate before identifying a workbook as

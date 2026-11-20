@@ -315,6 +315,17 @@ function assertStateCompatible_(state, identity, nowMs, maxResumeAgeHours) {
   return true;
 }
 
+// An expired checkpoint can never be resumed, so a scheduled run would fail on
+// it forever. When it belongs to this same account and workbook, main() discards
+// it and starts a replacement export. Anything else still fails closed.
+function isDiscardableExpiredState_(state, identity, nowMs, maxResumeAgeHours) {
+  var maxAgeMs = Number(maxResumeAgeHours) * 60 * 60 * 1000;
+  return Boolean(state) && isFinite(maxAgeMs) && maxAgeMs > 0 &&
+    state.accountId === identity.accountId &&
+    state.spreadsheetId === identity.spreadsheetId &&
+    (Number(nowMs) - Number(state.startedAtMs)) > maxAgeMs;
+}
+
 function planReset_(allowReset, sheetNames) {
   if (allowReset !== true) {
     throw new Error('Reset refused. Set CONFIG.ALLOW_RESET=true before calling resetExportState().');
@@ -3512,7 +3523,18 @@ function runManifestEngine_(
     var currentMs = now_();
     if (force || lastInfoWriteMs === null || infoIntervalMs === 0 ||
         currentMs - lastInfoWriteMs >= infoIntervalMs) {
-      adapter.writeInfo(state);
+      try {
+        adapter.writeInfo(state);
+      } catch (infoError) {
+        // The checkpoint is already saved. A periodic progress refresh must not
+        // abort the export; forced refreshes that record a status change still throw.
+        if (force) throw infoError;
+        if (typeof Logger !== 'undefined') {
+          Logger.log('Status tab refresh failed; continuing the export: ' +
+            String(infoError && infoError.message ? infoError.message : infoError));
+        }
+        return;
+      }
       lastInfoWriteMs = currentMs;
     }
   }
@@ -4549,7 +4571,12 @@ function createRuntimeAdapter_(context) {
       return AdsApp.getExecutionInfo().getRemainingTime();
     },
     saveState: function(state) { saveStateSheetRuntime_(context.spreadsheet, state); },
-    writeInfo: function(state) { writeExportInfoRuntime_(context.spreadsheet, state, context.manifest); },
+    writeInfo: function(state) {
+      // The whole refresh is idempotent, so a transient Sheets failure is retried.
+      withRetry_(function() {
+        writeExportInfoRuntime_(context.spreadsheet, state, context.manifest);
+      });
+    },
     writeProgressSummary: function(state, manifest) {
       writeStartHereRuntime_(
         context.spreadsheet,
@@ -4736,6 +4763,18 @@ function runExport_() {
     configSignature: materialConfigSignature_(manifest)
   };
   var state = loadStateSheetRuntime_(spreadsheet);
+  if (isDiscardableExpiredState_(state, identity, nowMs, CONFIG.MAX_RESUME_AGE_HOURS)) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log(
+        'Saved export state from ' + new Date(Number(state.startedAtMs)).toISOString() +
+        ' has expired and cannot be resumed. Discarding it and starting a replacement export.'
+      );
+    }
+    discardCheckpointRuntime_(spreadsheet, spreadsheetId);
+    state = null;
+    workbookSummary = summarizeWorkbookRuntime_(spreadsheet);
+    ownership = assertWorkbookOwnership_(workbookSummary);
+  }
   if (!state && ownership === 'owned') {
     assertOwnedWorkbookRestartIdentityRuntime_(
       spreadsheet,
@@ -5405,8 +5444,16 @@ function resetExportState_() {
   var spreadsheetId = extractSpreadsheetId_(CONFIG.SPREADSHEET_URL);
   var spreadsheet = openSpreadsheetRuntime_(spreadsheetId);
   assertWorkbookOwnership_(summarizeWorkbookRuntime_(spreadsheet));
+  planReset_(CONFIG.ALLOW_RESET, []);
+  var count = discardCheckpointRuntime_(spreadsheet, spreadsheetId);
+  Logger.log('Exporter checkpoint and temporary sheets reset. Existing final report tabs were preserved.');
+  Logger.log('Set CONFIG.ALLOW_RESET back to false before the next export.');
+  return count;
+}
+
+function discardCheckpointRuntime_(spreadsheet, spreadsheetId) {
   var names = spreadsheet.getSheets().map(function(sheet) { return sheet.getName(); });
-  var targets = planReset_(CONFIG.ALLOW_RESET, names);
+  var targets = planReset_(true, names);
 
   targets.filter(function(name) { return name.indexOf(BACKUP_PREFIX) === 0; }).forEach(function(name) {
     var backup = spreadsheet.getSheetByName(name);
@@ -5433,8 +5480,6 @@ function resetExportState_() {
     jobIndex: 0, ranges: {}, tabs: {}
   };
   writeExportInfoRuntime_(spreadsheet, resetState, manifest);
-  Logger.log('Exporter checkpoint and temporary sheets reset. Existing final report tabs were preserved.');
-  Logger.log('Set CONFIG.ALLOW_RESET back to false before the next export.');
   return targets.length;
 }
 
